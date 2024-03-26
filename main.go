@@ -50,29 +50,16 @@ func buy(ch *amqp.Channel, value string) {
 }
 
 func declareRabbit(farmName, area string) (*amqp.Connection, <-chan amqp.Delivery, *amqp.Channel) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError("initializing rabbit", err)
+	conn, _ := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	ch, _ := conn.Channel()
+	ch.ExchangeDeclare("ofertas", "topic", false, false, false, false, nil)
 
-	ch, err := conn.Channel()
-	failOnError("initializing offers channel", err)
+	offersQ, _ := ch.QueueDeclare("", false, true, true, false, nil)
+	ch.QueueBind(offersQ.Name, area, "ofertas", false, nil)
+	msgs, _ := ch.Consume(offersQ.Name, farmName, true, false, true, false, nil)
 
-	err = ch.ExchangeDeclare("ofertas", "topic", false, false, false, false, nil)
-	failOnError("declaring offers exchange", err)
-
-	offersQ, err := ch.QueueDeclare("", false, true, true, false, nil)
-	failOnError("declaring offers queue", err)
-
-	err = ch.QueueBind(offersQ.Name, area, "ofertas", false, nil)
-	failOnError("binding offers queue", err)
-
-	msgs, err := ch.Consume(offersQ.Name, farmName, true, false, true, false, nil)
-	failOnError("declaring offers consumer", err)
-
-	ch2, err := conn.Channel()
-	failOnError("initializing channel", err)
-
-	err = ch2.ExchangeDeclare("vendas", "direct", false, false, false, false, nil)
-	failOnError("declaring sales exchange", err)
+	ch2, _ := conn.Channel()
+	ch2.ExchangeDeclare("vendas", "direct", false, false, false, false, nil)
 
 	return conn, msgs, ch2
 }
