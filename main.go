@@ -9,24 +9,35 @@ import (
 )
 
 func main() {
-	farmName := "fazenda bom dia"
-	area := "sul"
-	conn, msgs, salesCh := declareRabbit(farmName, area)
+	//slog.SetLogLoggerLevel(slog.LevelDebug)
+	conn := declareRabbitDefaults()
 	defer conn.Close()
 
-	salesCh.QueueDeclare("compradorQ", false, true, false, false, nil) //TODO remover isso
-	salesCh.QueueBind("compradorQ", "comprador123", "vendas", false, nil)
+	//salesCh.QueueDeclare("compradorQ", false, true, false, false, nil) //TODO remover isso
+	//salesCh.QueueBind("compradorQ", "comprador123", "vendas", false, nil)
+
+	for i := 0; i < 10; i++ {
+		spawnBuyer(conn)
+	}
+
+	var forever chan struct{}
+	<-forever
+}
+
+func spawnBuyer(conn *amqp.Connection) {
+	farm := getRandomFarm()
+	slog.Debug(fmt.Sprintf("created farm:\n%s", farm.String()))
+	msgs, salesCh := declareFarmQueues(conn, farm)
+	_ = salesCh
 
 	go func() {
 		for m := range msgs {
-			slog.Info(fmt.Sprintf("received: %s", m.Body))
+			slog.Info(fmt.Sprintf("received: %s", m.Body), "id", farm.id)
 			buy(salesCh, string(m.Body))
 		}
 	}()
 
-	slog.Info(fmt.Sprintf("%s listening to %s", farmName, area))
-	var forever chan struct{}
-	<-forever
+	slog.Info("farm ready", "id", farm.id)
 }
 
 func buy(ch *amqp.Channel, value string) {
@@ -35,7 +46,7 @@ func buy(ch *amqp.Channel, value string) {
 	defer cancel()
 
 	err := ch.PublishWithContext(ctx,
-		"vendas",
+		SalesExchange,
 		"comprador123",
 		false, false,
 		amqp.Publishing{
@@ -49,24 +60,16 @@ func buy(ch *amqp.Channel, value string) {
 	}
 }
 
-func declareRabbit(farmName, area string) (*amqp.Connection, <-chan amqp.Delivery, *amqp.Channel) {
-	conn, _ := amqp.Dial("amqp://guest:guest@localhost:5672/")
+func declareFarmQueues(conn *amqp.Connection, farm Farm) (<-chan amqp.Delivery, *amqp.Channel) {
 	ch, _ := conn.Channel()
-	ch.ExchangeDeclare("ofertas", "topic", false, false, false, false, nil)
+	offersQ, _ := ch.QueueDeclare(farm.id, false, true, true, false, nil)
 
-	offersQ, _ := ch.QueueDeclare("", false, true, true, false, nil)
-	ch.QueueBind(offersQ.Name, area, "ofertas", false, nil)
-	msgs, _ := ch.Consume(offersQ.Name, farmName, true, false, true, false, nil)
-
-	ch2, _ := conn.Channel()
-	ch2.ExchangeDeclare("vendas", "direct", false, false, false, false, nil)
-
-	return conn, msgs, ch2
-}
-
-func failOnError(msg string, err error) {
-	if err != nil {
-		slog.Error(fmt.Sprintf("error %s", msg), "err", err)
-		panic(err)
+	for _, area := range farm.areas {
+		ch.QueueBind(offersQ.Name, area, OffersExchange, false, nil)
+		slog.Debug(fmt.Sprintf("%s listening to '%s'", farm.id, area))
 	}
+
+	msgs, _ := ch.Consume(offersQ.Name, farm.id, true, false, true, false, nil)
+
+	return msgs, ch
 }
