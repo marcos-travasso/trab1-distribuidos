@@ -15,6 +15,7 @@ type Farm struct {
 	name  string
 	areas []string
 	offersCh <-chan amqp.Delivery
+	deliveriesCh <-chan amqp.Delivery
 	salesCh *amqp.Channel
 }
 
@@ -54,12 +55,17 @@ func (f Farm) buy(offerPayload []byte) {
 
 func (f *Farm) declareQueues(conn *amqp.Connection) {
 	f.salesCh, _ = conn.Channel()
-	offersQ, _ := f.salesCh.QueueDeclare(f.id, false, true, true, false, nil)
-
+	offersQ, _ := f.salesCh.QueueDeclare(OffersExchange+"_"+f.id, false, true, true, false, nil)
 	for _, area := range f.areas {
 		f.salesCh.QueueBind(offersQ.Name, area, OffersExchange, false, nil)
 		slog.Debug(fmt.Sprintf("%s listening to '%s'", f.id, area))
 	}
 
 	f.offersCh, _ = f.salesCh.Consume(offersQ.Name, f.id, true, false, true, false, nil)
+	
+	
+	ch, _:= conn.Channel()
+	deliveriesQ, _ := ch.QueueDeclare(DeliveryExchange+"_"+f.id, false, true, true, false, nil)
+	ch.QueueBind(deliveriesQ.Name, f.id, DeliveryExchange, false, nil)
+	f.deliveriesCh, _ = ch.Consume(deliveriesQ.Name, f.id, true, false, true, false, nil)
 }

@@ -29,10 +29,17 @@ func spawnBuyer(conn *amqp.Connection) {
 
 	go func() {
 		for m := range farm.offersCh {
-			slog.Info(fmt.Sprintf("received: %s", m.Body), "id", farm.id)
+			slog.Info(fmt.Sprintf("offer message received: %s", m.Body), "id", farm.id)
 			if checkOffer(m.Body) {
 				farm.buy(m.Body)
 			}
+		}
+	}()
+
+	go func() {
+		for m := range farm.deliveriesCh {
+			slog.Info(fmt.Sprintf("delivery message received: %s", m.Body), "id", farm.id)
+			handleDelivery(m.Body)
 		}
 	}()
 

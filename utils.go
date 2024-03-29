@@ -1,12 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
 	"math/rand"
 	"strconv"
 	"strings"
-    "hash/fnv"
 )
 
 const BuyChance = 10
@@ -42,4 +43,15 @@ func checkOffer(offer []byte) bool {
 
 	hashedInt, _ := strconv.Atoi(hashedValue)
 	return hashedInt % BuyChance == rand.Intn(BuyChance)
+}
+
+func handleDelivery(deliveryPayload []byte) {
+	delivery := make(map[string]interface{})
+	json.Unmarshal(deliveryPayload, &delivery)
+
+	if delivery["status"].(bool) {
+		slog.Info(fmt.Sprintf("received %+v with success!", delivery))
+	} else {
+		slog.Info(fmt.Sprintf("%s could not be delivered", delivery["id"].(string)))	
+	}
 }
