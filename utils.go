@@ -6,13 +6,10 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+    "hash/fnv"
 )
 
-type Farm struct {
-	id    string
-	name  string
-	areas []string
-}
+const BuyChance = 10
 
 var availableNames = []string{"Fazenda Rio Sereno", "Sítio da Montanha Verde", "Fazenda Sol Poente", "Rancho das Árvores Altas", "Fazenda Canto dos Pássaros", "Sítio Vale das Flores", "Fazenda Brisa do Mar", "Recanto da Nascente", "Sítio do Lago Azul", "Fazenda Pedra Solitária", "Rancho da Serra Dourada", "Fazenda Rio Manso", "Sítio da Cachoeira", "Fazenda Primavera Radiante", "Recanto das Folhas Verdes", "Fazenda Raízes Fundas", "Sítio Vale Tranquilo", "Fazenda Céu Estrelado", "Rancho das Colinas Verdes", "Fazenda Lago Sereno", "Sítio da Bruma Matinal", "Fazenda Vale da Lua", "Recanto das Pedras Preciosas", "Fazenda Bosque Encantado", "Sítio da Aurora Dourada", "Fazenda dos Cordeiros Felizes", "Rancho dos Cavalos Selvagens", "Fazenda dos Bezerros Saltitantes", "Fazenda dos Pintinhos Dourados", "Sítio das Cabras Alegres", "Rancho das Éguas Serenas", "Fazenda dos Patos Quaquantes", "Fazenda da Galinha Pintadinha", "Sítio das Ovelhas Curiosas", "Rancho dos Porcos Rosados", "Fazenda das Vacas Leiteiras", "Fazenda dos Coelhos Saltadores", "Sítio das Aves Coloridas", "Rancho dos Gansos Tagarelas", "Fazenda dos Cachorros Amigáveis", "Fazenda dos Gatos Ronronantes", "Sítio dos Animais Aconchegantes", "Rancho dos Pavões Elegantes", "Fazenda dos Perus Trovadores", "Fazenda das Abelhas Zumbidoras", "Sítio dos Animais Curiosos", "Rancho dos Burros Travessos", "Fazenda dos Alpacas Fofinhas", "Fazenda dos Porquinhos da Índia", "Sítio das Cabras Montanheiras"}
 
@@ -38,10 +35,11 @@ func getAreas() []string {
 	return areas[:maxAreas]
 }
 
-func (f Farm) String() string {
-	return fmt.Sprintf("--------------------------------------------\n"+
-		"ID: %s\n"+
-		"Name: %s\n"+
-		"Areas: %+v\n"+
-		"--------------------------------------------\n", f.id, f.name, f.areas)
+func checkOffer(offer []byte) bool {
+	h := fnv.New64a()
+    h.Write(offer)
+    hashedValue := strconv.FormatUint(h.Sum64(), 10)
+
+	hashedInt, _ := strconv.Atoi(hashedValue)
+	return hashedInt % BuyChance == rand.Intn(BuyChance)
 }
