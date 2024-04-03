@@ -1,10 +1,5 @@
 services:
-  rabbit:
-    image: rabbitmq:3.13.0-management-alpine
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-#  server:
-#    build:
-#      context: .
-#      target: final
+  server:
+    build:
+      context: .
+      target: final
