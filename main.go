@@ -13,10 +13,7 @@ func main() {
 	conn := declareRabbitDefaults()
 	defer conn.Close()
 
-	// salesCh.QueueDeclare("compradorQ", false, true, false, false, nil) //TODO remover isso
-	// salesCh.QueueBind("compradorQ", "comprador123", "vendas", false, nil)
-
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 4; i++ {
 		spawnBuyer(conn)
 	}
 
@@ -31,7 +28,7 @@ func spawnBuyer(conn *amqp.Connection) {
 
 	go func() {
 		for m := range farm.offersCh {
-			time.Sleep(time.Duration(rand.Intn(5000) + 500) * time.Millisecond)
+			time.Sleep(time.Duration(rand.Intn(1000) + 500) * time.Millisecond)
 			slog.Info(fmt.Sprintf("offer message received: %s", m.Body), "id", farm.id)
 			if checkOffer(m.Body) {
 				farm.buy(m.Body)
