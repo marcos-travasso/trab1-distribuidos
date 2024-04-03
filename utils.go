@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const BuyChance = 10
@@ -46,6 +47,7 @@ func checkOffer(offer []byte) bool {
 }
 
 func handleDelivery(deliveryPayload []byte) {
+	time.Sleep(time.Duration(rand.Intn(5000) + 500) * time.Millisecond)
 	delivery := make(map[string]interface{})
 	json.Unmarshal(deliveryPayload, &delivery)
 
